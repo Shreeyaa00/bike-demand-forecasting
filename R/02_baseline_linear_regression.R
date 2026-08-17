@@ -1,8 +1,3 @@
----
-title: "02_baseline_linear_regression"
-output: html_document
----
-
 # ============================================================
 # Bike Rental Demand Forecasting
 # 02 - Baseline Linear Regression

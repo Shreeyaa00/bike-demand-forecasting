@@ -1,9 +1,3 @@
----
-title: "01_data_preparation"
-output: html_document
----
-
-```{r}
 # ============================================================
 # Bike Rental Demand Forecasting
 # 01 - Data Preparation
@@ -153,4 +147,3 @@ write.csv(
 )
 
 cat("\nClean dataset saved to: data/bike_clean.csv\n")
-```
