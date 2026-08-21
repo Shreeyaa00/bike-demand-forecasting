@@ -1,22 +1,7 @@
-# ============================================================
-# Bike Rental Demand Forecasting
-# 05 - Boosting Models
-# ============================================================
-
-
-# ============================================================
-# 1. Packages
-# ============================================================
-
 library(tidyverse)
 library(caret)
 library(gbm)
 library(xgboost)
-
-
-# ============================================================
-# 2. Load Clean Data
-# ============================================================
 
 df <- read.csv("data/bike_clean.csv")
 
@@ -33,11 +18,6 @@ df <- df %>%
     date = as.Date(date)
   )
 
-
-# ============================================================
-# 3. Same Train/Test Split
-# ============================================================
-
 set.seed(42)
 
 trainIndex <- createDataPartition(
@@ -48,25 +28,14 @@ trainIndex <- createDataPartition(
 
 train <- df[trainIndex, ]
 test <- df[-trainIndex, ]
-
 cat("Training observations:", nrow(train), "\n")
 cat("Testing observations:", nrow(test), "\n")
-
-
-# ============================================================
-# 4. Remove Date
-# ============================================================
 
 train_model <- train %>%
   select(-date)
 
 test_model <- test %>%
   select(-date)
-
-
-# ============================================================
-# 5. Evaluation Function
-# ============================================================
 
 evaluate_model <- function(actual, predicted) {
   
@@ -88,12 +57,6 @@ evaluate_model <- function(actual, predicted) {
     R_squared = r_squared
   )
 }
-
-
-# ============================================================
-# 6. GRADIENT BOOSTING
-# ============================================================
-
 set.seed(42)
 
 gbm_model <- gbm(
@@ -121,34 +84,16 @@ gbm_metrics <- evaluate_model(
 )
 
 gbm_metrics$Model <- "Gradient Boosting"
-
-
-cat("\n==============================\n")
 cat("GRADIENT BOOSTING\n")
-cat("==============================\n")
-
 print(gbm_metrics)
-
-
-# ============================================================
-# 7. GRADIENT BOOSTING FEATURE IMPORTANCE
-# ============================================================
 
 gbm_importance <- summary(
   gbm_model,
   plotit = FALSE
 )
 
-cat("\n========================================\n")
 cat("GRADIENT BOOSTING FEATURE IMPORTANCE\n")
-cat("========================================\n")
-
 print(gbm_importance)
-
-
-# ============================================================
-# 8. PREPARE DATA FOR XGBOOST
-# ============================================================
 
 x_train <- model.matrix(
   cnt ~ .,
@@ -169,11 +114,6 @@ cat("\nXGBoost training dimensions:\n")
 cat("Rows:", nrow(x_train), "\n")
 cat("Columns:", ncol(x_train), "\n")
 
-
-# ============================================================
-# 9. XGBOOST
-# ============================================================
-
 set.seed(42)
 
 xgb_model <- xgboost(
@@ -189,20 +129,10 @@ xgb_model <- xgboost(
   eval_metric = "rmse"
 )
 
-
-# ============================================================
-# 10. XGBOOST PREDICTIONS
-# ============================================================
-
 xgb_predictions <- predict(
   xgb_model,
   x_test
 )
-
-
-# ============================================================
-# 11. XGBOOST EVALUATION
-# ============================================================
 
 xgb_metrics <- evaluate_model(
   y_test,
@@ -211,37 +141,20 @@ xgb_metrics <- evaluate_model(
 
 xgb_metrics$Model <- "XGBoost"
 
-
-cat("\n==============================\n")
 cat("XGBOOST\n")
-cat("==============================\n")
-
 print(xgb_metrics)
-
-
-# ============================================================
-# 12. XGBOOST FEATURE IMPORTANCE
-# ============================================================
 
 xgb_importance <- xgb.importance(
   model = xgb_model
 )
 
-cat("\n========================================\n")
 cat("XGBOOST FEATURE IMPORTANCE\n")
-cat("========================================\n")
-
 print(
   head(
     xgb_importance,
     15
   )
 )
-
-
-# ============================================================
-# 13. FULL MODEL LEADERBOARD
-# ============================================================
 
 previous_models <- data.frame(
   
@@ -308,17 +221,8 @@ all_models <- bind_rows(
 ) %>%
   arrange(RMSE)
 
-
-cat("\n========================================\n")
 cat("FULL MODEL LEADERBOARD\n")
-cat("========================================\n")
-
 print(all_models)
-
-
-# ============================================================
-# 14. MODEL COMPARISON PLOT
-# ============================================================
 
 comparison_long <- all_models %>%
   pivot_longer(
@@ -347,11 +251,6 @@ ggplot(
     y = "Error"
   ) +
   theme_minimal()
-
-
-# ============================================================
-# 15. ACTUAL VS PREDICTED
-# ============================================================
 
 boosting_results <- bind_rows(
   gbm_results,
@@ -403,11 +302,6 @@ ggplot(
   ) +
   theme_minimal()
 
-
-# ============================================================
-# 16. SAVE RESULTS
-# ============================================================
-
 write.csv(
   all_models,
   "outputs/full_model_comparison.csv",
@@ -428,8 +322,3 @@ write.csv(
 
 
 cat("\nResults saved to outputs/\n")
-
-
-# ============================================================
-# END
-# ============================================================

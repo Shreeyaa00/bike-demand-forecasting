@@ -1,23 +1,8 @@
-# ============================================================
-# Bike Rental Demand Forecasting
-# 06 - Time-Based Validation
-# ============================================================
-
-
-# ============================================================
-# 1. Packages
-# ============================================================
-
 library(tidyverse)
 library(caret)
 library(gbm)
 library(randomForest)
 library(xgboost)
-
-
-# ============================================================
-# 2. Load Clean Data
-# ============================================================
 
 df <- read.csv("data/bike_clean.csv")
 
@@ -35,22 +20,10 @@ df <- df %>%
   ) %>%
   arrange(date, as.numeric(as.character(hr)))
 
-
-# ============================================================
-# 3. Inspect Date Range
-# ============================================================
-
 cat("Full dataset date range:\n")
 print(range(df$date))
 
 cat("\nTotal observations:", nrow(df), "\n")
-
-
-# ============================================================
-# 4. Time-Based Train/Test Split
-# ============================================================
-
-# Use the latest 20% of observations as the future test set
 
 split_index <- floor(
   0.80 * nrow(df)
@@ -59,35 +32,18 @@ split_index <- floor(
 train <- df[1:split_index, ]
 test <- df[(split_index + 1):nrow(df), ]
 
-
-cat("\n==============================\n")
 cat("TIME-BASED SPLIT\n")
-cat("==============================\n")
-
 cat("Training observations:", nrow(train), "\n")
 cat("Testing observations:", nrow(test), "\n")
-
 cat("\nTraining period:\n")
 print(range(train$date))
-
 cat("\nTesting period:\n")
 print(range(test$date))
 
-
-# ============================================================
-# 5. Remove Date
-# ============================================================
-
 train_model <- train %>%
   select(-date)
-
 test_model <- test %>%
   select(-date)
-
-
-# ============================================================
-# 6. Evaluation Function
-# ============================================================
 
 evaluate_model <- function(actual, predicted) {
   
@@ -110,11 +66,6 @@ evaluate_model <- function(actual, predicted) {
   )
 }
 
-
-# ============================================================
-# 7. LINEAR REGRESSION
-# ============================================================
-
 linear_model <- lm(
   cnt ~ .,
   data = train_model
@@ -132,17 +83,8 @@ linear_metrics <- evaluate_model(
 
 linear_metrics$Model <- "Linear Regression"
 
-
-cat("\n==============================\n")
 cat("LINEAR REGRESSION\n")
-cat("==============================\n")
-
 print(linear_metrics)
-
-
-# ============================================================
-# 8. RANDOM FOREST
-# ============================================================
 
 set.seed(42)
 
@@ -165,17 +107,8 @@ rf_metrics <- evaluate_model(
 
 rf_metrics$Model <- "Random Forest"
 
-
-cat("\n==============================\n")
 cat("RANDOM FOREST\n")
-cat("==============================\n")
-
 print(rf_metrics)
-
-
-# ============================================================
-# 9. GRADIENT BOOSTING
-# ============================================================
 
 set.seed(42)
 
@@ -203,17 +136,8 @@ gbm_metrics <- evaluate_model(
 
 gbm_metrics$Model <- "Gradient Boosting"
 
-
-cat("\n==============================\n")
 cat("GRADIENT BOOSTING\n")
-cat("==============================\n")
-
 print(gbm_metrics)
-
-
-# ============================================================
-# 10. XGBOOST DATA PREPARATION
-# ============================================================
 
 x_train <- model.matrix(
   cnt ~ .,
@@ -228,15 +152,9 @@ x_test <- model.matrix(
 y_train <- train_model$cnt
 y_test <- test_model$cnt
 
-
 cat("\nXGBoost training dimensions:\n")
 cat("Rows:", nrow(x_train), "\n")
 cat("Columns:", ncol(x_train), "\n")
-
-
-# ============================================================
-# 11. XGBOOST
-# ============================================================
 
 set.seed(42)
 
@@ -264,18 +182,8 @@ xgb_metrics <- evaluate_model(
 )
 
 xgb_metrics$Model <- "XGBoost"
-
-
-cat("\n==============================\n")
 cat("XGBOOST\n")
-cat("==============================\n")
-
 print(xgb_metrics)
-
-
-# ============================================================
-# 12. TIME-BASED MODEL LEADERBOARD
-# ============================================================
 
 time_results <- bind_rows(
   linear_metrics,
@@ -291,17 +199,8 @@ time_results <- bind_rows(
   ) %>%
   arrange(RMSE)
 
-
-cat("\n========================================\n")
 cat("TIME-BASED MODEL LEADERBOARD\n")
-cat("========================================\n")
-
 print(time_results)
-
-
-# ============================================================
-# 13. COMPARE RANDOM SPLIT VS TIME SPLIT
-# ============================================================
 
 random_split_results <- data.frame(
   
@@ -341,17 +240,8 @@ time_comparison <- time_results %>%
     R_squared
   )
 
-
-cat("\n========================================\n")
 cat("RANDOM SPLIT VS TIME-BASED VALIDATION\n")
-cat("========================================\n")
-
 print(time_comparison)
-
-
-# ============================================================
-# 14. ACTUAL VS PREDICTED - BEST MODEL
-# ============================================================
 
 best_model <- time_results$Model[1]
 
@@ -405,11 +295,6 @@ ggplot(
   ) +
   theme_minimal()
 
-
-# ============================================================
-# 15. SAVE RESULTS
-# ============================================================
-
 write.csv(
   time_results,
   "outputs/time_based_model_comparison.csv",
@@ -430,8 +315,3 @@ write.csv(
 
 
 cat("\nResults saved to outputs/\n")
-
-
-# ============================================================
-# END
-# ============================================================

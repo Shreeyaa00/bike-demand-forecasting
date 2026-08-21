@@ -1,21 +1,7 @@
-# ============================================================
-# Bike Rental Demand Forecasting
-# 02 - Baseline Linear Regression
-# ============================================================
-
-# Packages ---------------------------------------------------
-
 library(tidyverse)
 library(caret)
 
-
-# ------------------------------------------------------------
-# 1. Load Clean Data
-# ------------------------------------------------------------
-
 df <- read.csv("data/bike_clean.csv")
-
-# Convert categorical variables back to factors
 df <- df %>%
   mutate(
     season = factor(season),
@@ -29,11 +15,6 @@ df <- df %>%
     date = as.Date(date)
   )
 
-
-# ------------------------------------------------------------
-# 2. Create Baseline Train/Test Split
-# ------------------------------------------------------------
-
 set.seed(42)
 
 trainIndex <- createDataPartition(
@@ -44,19 +25,8 @@ trainIndex <- createDataPartition(
 
 train <- df[trainIndex, ]
 test <- df[-trainIndex, ]
-
-
-# Check split
 cat("Training observations:", nrow(train), "\n")
 cat("Testing observations:", nrow(test), "\n")
-
-
-# ------------------------------------------------------------
-# 3. Remove Date from Baseline Model
-# ------------------------------------------------------------
-
-# Date is retained in the dataset for future time-based
-# validation, but is not directly used in the baseline model.
 
 train_model <- train %>%
   select(-date)
@@ -64,58 +34,28 @@ train_model <- train %>%
 test_model <- test %>%
   select(-date)
 
-
-# ------------------------------------------------------------
-# 4. Fit Linear Regression
-# ------------------------------------------------------------
-
 linear_model <- lm(
   cnt ~ .,
   data = train_model
 )
-
-# Model summary
 summary(linear_model)
-
-
-# ------------------------------------------------------------
-# 5. Generate Predictions
-# ------------------------------------------------------------
 
 predictions <- predict(
   linear_model,
   newdata = test_model
 )
 
-
-# ------------------------------------------------------------
-# 6. Evaluate Model
-# ------------------------------------------------------------
-
 actual <- test_model$cnt
-
 RMSE <- sqrt(mean((actual - predictions)^2))
-
 MAE <- mean(abs(actual - predictions))
-
 R_squared <- 1 -
   sum((actual - predictions)^2) /
   sum((actual - mean(actual))^2)
 
-
-# Display metrics
-cat("\n==============================\n")
 cat("BASELINE LINEAR REGRESSION\n")
-cat("==============================\n")
-
 cat("RMSE:", round(RMSE, 3), "\n")
 cat("MAE:", round(MAE, 3), "\n")
 cat("R-squared:", round(R_squared, 4), "\n")
-
-
-# ------------------------------------------------------------
-# 7. Actual vs Predicted
-# ------------------------------------------------------------
 
 results <- data.frame(
   Actual = actual,
@@ -137,11 +77,6 @@ ggplot(results, aes(x = Actual, y = Predicted)) +
   ) +
   theme_minimal()
 
-
-# ------------------------------------------------------------
-# 8. Residual Plot
-# ------------------------------------------------------------
-
 ggplot(results, aes(x = Predicted, y = Residual)) +
   geom_point(alpha = 0.35) +
   geom_hline(
@@ -154,11 +89,6 @@ ggplot(results, aes(x = Predicted, y = Residual)) +
     y = "Residual"
   ) +
   theme_minimal()
-
-
-# ------------------------------------------------------------
-# 9. Save Model Results
-# ------------------------------------------------------------
 
 model_metrics <- data.frame(
   Model = "Linear Regression",
@@ -178,8 +108,3 @@ write.csv(
   "outputs/linear_regression_predictions.csv",
   row.names = FALSE
 )
-
-
-# ------------------------------------------------------------
-# END
-# ------------------------------------------------------------

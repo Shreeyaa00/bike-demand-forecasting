@@ -1,21 +1,6 @@
-# ============================================================
-# Bike Rental Demand Forecasting
-# 07 - Lag & Rolling Feature Engineering
-# ============================================================
-
-
-# ============================================================
-# 1. Packages
-# ============================================================
-
 library(tidyverse)
 library(caret)
 library(gbm)
-
-
-# ============================================================
-# 2. Load Clean Data
-# ============================================================
 
 df <- read.csv("data/bike_clean.csv")
 
@@ -33,55 +18,26 @@ df <- df %>%
   ) %>%
   arrange(date, as.numeric(as.character(hr)))
 
-
-# ============================================================
-# 3. Create Continuous Time Index
-# ============================================================
-
-# The dataset contains hourly observations, but some hours/days
-# are missing. We therefore create lags based on chronological
-# row order rather than assuming every row is exactly one hour apart.
-
 df <- df %>%
   mutate(
     time_index = row_number()
   )
 
-
-# ============================================================
-# 4. Create Historical Demand Features
-# ============================================================
-
-# IMPORTANT:
-# All lag features use ONLY previous observations.
-# This prevents future demand from leaking into the model.
-
 df <- df %>%
   mutate(
     
-    # Previous observation
     lag_1 = lag(cnt, 1),
     
-    # Approximately previous day
     lag_24 = lag(cnt, 24),
     
-    # Approximately previous week
     lag_168 = lag(cnt, 168),
     
-    # Previous 3 observations
     lag_3 = lag(cnt, 3),
     
-    # Previous 6 observations
     lag_6 = lag(cnt, 6)
     
   )
 
-
-# ============================================================
-# 5. Rolling Demand Features
-# ============================================================
-
-# Rolling means are calculated using ONLY previous values.
 
 df <- df %>%
   mutate(
@@ -112,15 +68,7 @@ df <- df %>%
     
   )
 
-
-# ============================================================
-# 6. Inspect New Features
-# ============================================================
-
-cat("\n========================================\n")
 cat("NEW FEATURE ENGINEERING\n")
-cat("========================================\n")
-
 print(
   df %>%
     select(
@@ -138,13 +86,6 @@ print(
     ) %>%
     head(15)
 )
-
-
-# ============================================================
-# 7. Remove Rows Without Historical Information
-# ============================================================
-
-# The first observations cannot have lag/rolling values.
 
 df_model <- df %>%
   drop_na(
@@ -165,13 +106,6 @@ cat(
   "\n"
 )
 
-
-# ============================================================
-# 8. Create Proper Date-Based Train/Test Split
-# ============================================================
-
-# Use the latest 20% of UNIQUE DATES as the test period.
-
 unique_dates <- sort(
   unique(df_model$date)
 )
@@ -191,26 +125,14 @@ train <- df_model %>%
 test <- df_model %>%
   filter(date >= split_date)
 
-
-cat("\n========================================\n")
 cat("DATE-BASED TRAIN / TEST SPLIT\n")
-cat("========================================\n")
-
 cat("\nSplit date:", as.character(split_date), "\n")
-
 cat("\nTraining observations:", nrow(train), "\n")
 cat("Testing observations:", nrow(test), "\n")
-
 cat("\nTraining period:\n")
 print(range(train$date))
-
 cat("\nTesting period:\n")
 print(range(test$date))
-
-
-# ============================================================
-# 9. Verify NO DATE OVERLAP
-# ============================================================
 
 date_overlap <- intersect(
   unique(train$date),
@@ -225,11 +147,6 @@ if (length(date_overlap) > 0) {
   cat("✓ No date overlap detected.\n")
 }
 
-
-# ============================================================
-# 10. Remove Date and Time Index
-# ============================================================
-
 train_model <- train %>%
   select(
     -date,
@@ -241,11 +158,6 @@ test_model <- test %>%
     -date,
     -time_index
   )
-
-
-# ============================================================
-# 11. Evaluation Function
-# ============================================================
 
 evaluate_model <- function(actual, predicted) {
   
@@ -267,13 +179,6 @@ evaluate_model <- function(actual, predicted) {
     R_squared = r_squared
   )
 }
-
-
-# ============================================================
-# 12. Gradient Boosting WITHOUT Lag Features
-# ============================================================
-
-# This gives us a direct baseline for comparison.
 
 baseline_train <- train_model %>%
   select(
@@ -329,11 +234,6 @@ baseline_metrics <- evaluate_model(
 baseline_metrics$Model <-
   "Gradient Boosting - No Lag Features"
 
-
-# ============================================================
-# 13. Gradient Boosting WITH Lag Features
-# ============================================================
-
 set.seed(42)
 
 lag_gbm <- gbm(
@@ -363,11 +263,6 @@ lag_metrics <- evaluate_model(
 lag_metrics$Model <-
   "Gradient Boosting - Lag Features"
 
-
-# ============================================================
-# 14. Compare Models
-# ============================================================
-
 lag_comparison <- bind_rows(
   baseline_metrics,
   lag_metrics
@@ -380,17 +275,8 @@ lag_comparison <- bind_rows(
   ) %>%
   arrange(RMSE)
 
-
-cat("\n========================================\n")
 cat("LAG FEATURE MODEL COMPARISON\n")
-cat("========================================\n")
-
 print(lag_comparison)
-
-
-# ============================================================
-# 15. Calculate Improvement
-# ============================================================
 
 rmse_improvement <- (
   baseline_metrics$RMSE -
@@ -408,12 +294,7 @@ r2_improvement <- (
   lag_metrics$R_squared -
     baseline_metrics$R_squared
 )
-
-
-cat("\n========================================\n")
 cat("FEATURE ENGINEERING IMPACT\n")
-cat("========================================\n")
-
 cat(
   "RMSE improvement:",
   round(rmse_improvement, 2),
@@ -432,28 +313,14 @@ cat(
   "\n"
 )
 
-
-# ============================================================
-# 16. Feature Importance
-# ============================================================
-
 importance <- summary(
   lag_gbm,
   plotit = FALSE
 )
-
-cat("\n========================================\n")
 cat("GRADIENT BOOSTING FEATURE IMPORTANCE\n")
-cat("========================================\n")
-
 print(
   head(importance, 20)
 )
-
-
-# ============================================================
-# 17. Actual vs Predicted
-# ============================================================
 
 predictions_df <- data.frame(
   Date = test$date,
@@ -489,11 +356,6 @@ prediction_plot <- ggplot(
 
 print(prediction_plot)
 
-
-# ============================================================
-# 18. Save Results
-# ============================================================
-
 write.csv(
   lag_comparison,
   "outputs/lag_feature_comparison.csv",
@@ -514,8 +376,3 @@ write.csv(
 
 
 cat("\nResults saved to outputs/\n")
-
-
-# ============================================================
-# END
-# ============================================================
